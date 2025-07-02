@@ -1,0 +1,180 @@
+<!-- Import Raleway font -->
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600&display=swap" rel="stylesheet">
+
+<div id="kurbsy-form" style="max-width: 600px; margin: 2rem auto; padding: 2rem; border: 2px solid #5e18eb; border-radius: 14px; background: #ffffff; font-family: 'Raleway', sans-serif; color: #000; box-shadow: 0 0 15px rgba(94, 24, 235, 0.08);">
+  <h2 style="text-align: center; color: #5e18eb; margin-bottom: 0.5rem;">A Very Kurbsy Quote</h2>
+  <p style="text-align: center; font-style: italic; margin-bottom: 1.5rem;">We are reliable. We offer peace of mind. With our extraordinary drivers who are CPR/First-Aid & Defensive Driving Certified, we treat our customers with care, attention, and dignity.</p>
+
+  <div style="display: grid; gap: 1rem;">
+    <input type="text" id="name" placeholder="Your full name, please" required style="padding: 0.65rem; border-radius: 6px; border: 1px solid #ccc;">
+    <input type="tel" id="phone" placeholder="Best number to reach you" required style="padding: 0.65rem; border-radius: 6px; border: 1px solid #ccc;">
+    <input type="email" id="email" placeholder="Your email address" required style="padding: 0.65rem; border-radius: 6px; border: 1px solid #ccc;">
+
+    <label for="pickupDate"><strong>On which date do you need a ride?</strong></label>
+    <input type="date" id="pickupDate" required style="padding: 0.65rem; border-radius: 6px; border: 1px solid #ccc;">
+
+    <label for="pickupTime"><strong>At what time would you like for your ride to start?</strong></label>
+    <input type="time" id="pickupTime" required style="padding: 0.65rem; border-radius: 6px; border: 1px solid #ccc;">
+
+    <select id="rideType" required style="padding: 0.65rem; border-radius: 6px; border: 1px solid #ccc;">
+      <option value="">Select Ride Type</option>
+      <option value="One Way">One Way</option>
+      <option value="Round Trip">Round Trip</option>
+    </select>
+
+    <select id="waitTime" required style="padding: 0.65rem; border-radius: 6px; border: 1px solid #ccc;">
+      <option value="">Wait Time (hours)</option>
+      <option value="0">0</option>
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+
+    <label style="margin-top: 0.5rem;"><strong>Are there things we should know about your mobility to help best serve you?</strong></label>
+    <div id="mobilityOptions" style="display: grid; gap: 0.4rem;">
+      <label><input type="checkbox" value="None"> None</label>
+      <label><input type="checkbox" value="Cane"> Cane</label>
+      <label><input type="checkbox" value="Scooter"> Scooter</label>
+      <label><input type="checkbox" value="Wheelchair (manual)"> Wheelchair (manual)</label>
+      <label><input type="checkbox" value="Wheelchair (power)"> Wheelchair (power)</label>
+      <label><input type="checkbox" value="Walker"> Walker</label>
+      <label><input type="checkbox" value="Other" id="otherMobility"> Other</label>
+      <input type="text" id="otherMobilityText" placeholder="Please describe..." style="padding: 0.65rem; border-radius: 6px; border: 1px solid #ccc; display: none;">
+    </div>
+
+    <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid #e3d7ff;">
+
+    <input id="origin" type="text" placeholder="Where should we pick you up?" style="padding: 0.65rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 6px;" />
+    <input id="destination" type="text" placeholder="Where are we taking you?" style="padding: 0.65rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 6px;" />
+
+    <button id="calc-btn" type="button" style="background: #5e18eb; color: #fff; border: none; padding: 0.75rem; font-size: 1rem; border-radius: 6px; cursor: pointer;">Calculate Fare</button>
+
+    <div id="output" style="margin-top: 1rem; padding: 1rem; background: #f7f5ff; border-radius: 6px; border: 1px solid #e3d7ff; font-size: 1rem;"></div>
+
+    <button id="submit-btn" style="background: black; color: #fff; border: none; padding: 0.9rem; font-size: 1rem; border-radius: 6px; cursor: pointer;">Submit Booking</button>
+    <div id="formMessage" style="color: red; margin-top: 1rem;"></div>
+  </div>
+</div>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBm6_tBYK4syQItVczJlSXmG411xsuuvLg&libraries=places"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const originInput = document.getElementById("origin");
+    const destInput = document.getElementById("destination");
+    const rideTypeSelect = document.getElementById("rideType");
+    const waitTimeSelect = document.getElementById("waitTime");
+    const output = document.getElementById("output");
+    const otherCheckbox = document.getElementById("otherMobility");
+    const otherTextbox = document.getElementById("otherMobilityText");
+    const submitBtn = document.getElementById("submit-btn");
+
+    if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+      new google.maps.places.Autocomplete(originInput);
+      new google.maps.places.Autocomplete(destInput);
+    }
+
+    otherCheckbox.addEventListener("change", function () {
+      otherTextbox.style.display = this.checked ? "block" : "none";
+    });
+
+    document.getElementById("calc-btn").addEventListener("click", function () {
+      const origin = originInput.value.trim();
+      const destination = destInput.value.trim();
+      const rideType = rideTypeSelect.value;
+      const waitTime = waitTimeSelect.value;
+
+      if (!origin || !destination || !rideType || waitTime === "") {
+        output.textContent = "Please enter pickup, destination, ride type, and wait time.";
+        return;
+      }
+
+      const mobilityCheckboxes = document.querySelectorAll('#mobilityOptions input[type="checkbox"]');
+      const selectedMobility = Array.from(mobilityCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
+      const surchargeItems = ["Scooter", "Wheelchair (manual)", "Wheelchair (power)"];
+      const mobilitySurcharge = selectedMobility.filter(item => surchargeItems.includes(item)).length * 35;
+
+      const waitTimeCharge = parseInt(waitTime) * 35;
+
+      const service = new google.maps.DistanceMatrixService();
+      service.getDistanceMatrix({
+        origins: [origin],
+        destinations: [destination],
+        travelMode: "DRIVING",
+        unitSystem: google.maps.UnitSystem.IMPERIAL,
+      }, function (response, status) {
+        if (status !== "OK") {
+          output.textContent = "Error calculating fare.";
+          return;
+        }
+
+        const element = response.rows[0].elements[0];
+        if (element.status !== "OK") {
+          output.textContent = "Unable to calculate fare.";
+          return;
+        }
+
+        const miles = parseFloat(element.distance.text.replace(" mi", ""));
+        let baseFare = 20 + (1.75 * miles);
+        let totalFare = baseFare + mobilitySurcharge + waitTimeCharge;
+
+        if (rideType === "Round Trip") {
+          totalFare *= 1.95;
+        }
+
+        output.innerHTML = 
+          <strong>Distance:</strong> ${element.distance.text}<br/>
+          <strong>Base Fare:</strong> $${baseFare.toFixed(2)}<br/>
+          <strong>Mobility Surcharge:</strong> $${mobilitySurcharge.toFixed(2)}<br/>
+          <strong>Wait Time Charge:</strong> $${waitTimeCharge.toFixed(2)}<br/>
+          <strong>Trip Type:</strong> ${rideType}<br/>
+          <strong>Total Estimated Fare:</strong> <span style="color:#5e18eb; font-weight: bold;">$${totalFare.toFixed(2)}</span>
+        ;
+      });
+    });
+
+    submitBtn.addEventListener("click", async function () {
+      const name = document.getElementById("name").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const rideType = document.getElementById("rideType").value;
+      const waitTime = document.getElementById("waitTime").value;
+      const pickupDate = document.getElementById("pickupDate").value;
+      const pickupTime = document.getElementById("pickupTime").value;
+      const origin = originInput.value.trim();
+      const destination = destInput.value.trim();
+      const messageEl = document.getElementById("formMessage");
+
+      if (!name || !phone || !email || !rideType || !waitTime || !pickupDate || !pickupTime || !origin || !destination) {
+        messageEl.style.color = "red";
+        messageEl.textContent = "Please complete all required fields.";
+        return;
+      }
+
+      const formData = {
+        name, phone, email, rideType, waitTime, pickupDate, pickupTime, origin, destination
+      };
+
+      try {
+        const response = await fetch("/send-booking-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(formData)
+        });
+
+        if (response.ok) {
+          messageEl.style.color = "green";
+          messageEl.textContent = "Thank you for your submission. Someone from our dedicated team will respond to you very shortly.";
+        } else {
+          throw new Error("Server error");
+        }
+      } catch (error) {
+        messageEl.style.color = "red";
+        messageEl.textContent = "An error occurred while submitting your booking. Please try again.";
+      }
+    });
+  });
+</script>
